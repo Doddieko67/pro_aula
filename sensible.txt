@@ -1,0 +1,1 @@
+callback url: https://hhhtrxaukmgiseubygky.supabase.co/auth/v1/callback
