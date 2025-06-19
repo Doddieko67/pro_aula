@@ -6,6 +6,7 @@ import 'package:pro_aula/models/form_model.dart';
 import 'package:pro_aula/models/theme_model.dart';
 import 'package:pro_aula/models/user_progress.dart';
 import 'package:pro_aula/providers/supabase_providers.dart';
+import 'package:pro_aula/services/ai_theme_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Provider para verificar si el usuario completó este tema
@@ -79,7 +80,15 @@ class ThemeContentScreen extends ConsumerStatefulWidget {
 
 class _ThemeContentScreenState extends ConsumerState<ThemeContentScreen> {
   final ScrollController _scrollController = ScrollController();
+  final TextEditingController _questionController = TextEditingController();
+  final AIThemeService _aiService = AIThemeService();
   bool _hasViewedContent = false;
+  bool _isGeneratingDiagram = false;
+  bool _isAnsweringQuestion = false;
+  bool _isGeneratingVisual = false;
+  String? _generatedDiagram;
+  String? _aiAnswer;
+  Map<String, dynamic>? _visualContent;
 
   @override
   void initState() {
@@ -91,6 +100,7 @@ class _ThemeContentScreenState extends ConsumerState<ThemeContentScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
+    _questionController.dispose();
     super.dispose();
   }
 
@@ -335,6 +345,11 @@ class _ThemeContentScreenState extends ConsumerState<ThemeContentScreen> {
 
           // Contenido del tema
           _buildThemeContent(theme),
+
+          const SizedBox(height: 24),
+
+          // Sección de IA
+          _buildAISection(theme),
 
           const SizedBox(height: 24),
 
@@ -1020,6 +1035,501 @@ class _ThemeContentScreenState extends ConsumerState<ThemeContentScreen> {
                 ),
               ),
             ),
+    );
+  }
+
+  // Métodos para funcionalidad de IA
+  Future<void> _generateDiagram(CourseTheme theme) async {
+    setState(() {
+      _isGeneratingDiagram = true;
+      _generatedDiagram = null;
+    });
+
+    try {
+      final diagramContent = await _aiService.generateDiagram(
+        theme.title,
+        theme.content.toString(),
+      );
+      
+      setState(() {
+        _generatedDiagram = diagramContent;
+        _isGeneratingDiagram = false;
+      });
+    } catch (e) {
+      setState(() {
+        _generatedDiagram = 'Error al generar el diagrama: ${e.toString()}';
+        _isGeneratingDiagram = false;
+      });
+    }
+  }
+
+  Future<void> _askQuestion(CourseTheme theme) async {
+    final question = _questionController.text.trim();
+    if (question.isEmpty) return;
+
+    setState(() {
+      _isAnsweringQuestion = true;
+      _aiAnswer = null;
+    });
+
+    try {
+      final answer = await _aiService.answerHypothetical(
+        question,
+        theme.title,
+        theme.content.toString(),
+      );
+      
+      setState(() {
+        _aiAnswer = answer;
+        _isAnsweringQuestion = false;
+      });
+    } catch (e) {
+      setState(() {
+        _aiAnswer = 'Error al procesar tu pregunta: ${e.toString()}';
+        _isAnsweringQuestion = false;
+      });
+    }
+  }
+
+  Future<void> _generateVisualContent(CourseTheme theme) async {
+    setState(() {
+      _isGeneratingVisual = true;
+      _visualContent = null;
+    });
+
+    try {
+      final visualContent = await _aiService.generateVisualContent(
+        theme.title,
+        theme.content.toString(),
+      );
+      
+      setState(() {
+        _visualContent = visualContent;
+        _isGeneratingVisual = false;
+      });
+    } catch (e) {
+      setState(() {
+        _visualContent = {
+          'description': 'Error al generar contenido visual: ${e.toString()}',
+          'asciiDiagram': 'Error generando diagrama: ${e.toString()}',
+          'imageData': null,
+          'hasImage': false,
+        };
+        _isGeneratingVisual = false;
+      });
+    }
+  }
+
+  Widget _buildAISection(CourseTheme theme) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(
+                  Icons.psychology_outlined,
+                  color: AppColors.vibrantRed,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Asistente IA',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.golden.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.golden.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.auto_awesome,
+                        size: 14,
+                        color: AppColors.golden,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Gemini',
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: AppColors.golden,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            
+            // Botones principales
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _isGeneratingDiagram ? null : () => _generateDiagram(theme),
+                    icon: _isGeneratingDiagram 
+                      ? SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.surface),
+                          ),
+                        )
+                      : const Icon(Icons.draw_outlined),
+                    label: Text(_isGeneratingDiagram ? 'Generando...' : 'Diagrama'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.golden,
+                      foregroundColor: AppColors.surface,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _isGeneratingVisual ? null : () => _generateVisualContent(theme),
+                    icon: _isGeneratingVisual 
+                      ? SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.surface),
+                          ),
+                        )
+                      : const Icon(Icons.image_outlined),
+                    label: Text(_isGeneratingVisual ? 'Generando...' : 'Visual'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.vibrantRed,
+                      foregroundColor: AppColors.surface,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Input para preguntas
+            TextField(
+              controller: _questionController,
+              decoration: InputDecoration(
+                hintText: 'Pregunta: "¿Qué pasaría si..."',
+                prefixIcon: const Icon(Icons.question_answer),
+                suffixIcon: IconButton(
+                  onPressed: _isAnsweringQuestion ? null : () => _askQuestion(theme),
+                  icon: _isAnsweringQuestion
+                    ? SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.vibrantRed),
+                        ),
+                      )
+                    : const Icon(Icons.send),
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              maxLines: null,
+              textInputAction: TextInputAction.send,
+              onSubmitted: _isAnsweringQuestion ? null : (_) => _askQuestion(theme),
+            ),
+            
+            // Mostrar diagrama generado
+            if (_generatedDiagram != null) ...[
+              const SizedBox(height: 20),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.golden.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.golden.withOpacity(0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.draw_outlined,
+                          color: AppColors.golden,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Diagrama Generado',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.golden,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      _generatedDiagram!,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            
+            // Mostrar respuesta de IA
+            if (_aiAnswer != null) ...[
+              const SizedBox(height: 20),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.progressGreen.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.progressGreen.withOpacity(0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.psychology_outlined,
+                          color: AppColors.progressGreen,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Respuesta IA',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.progressGreen,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      _aiAnswer!,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            
+            // Mostrar contenido visual generado
+            if (_visualContent != null) ...[
+              const SizedBox(height: 20),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.vibrantRed.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.vibrantRed.withOpacity(0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.image_outlined,
+                          color: AppColors.vibrantRed,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Contenido Visual Generado',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.vibrantRed,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Descripción visual
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.visibility_outlined, size: 16, color: AppColors.vibrantRed),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Descripción Visual:',
+                                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.vibrantRed,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _visualContent!['description'] ?? '',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              height: 1.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 12),
+                    
+                    // Diagrama ASCII generado por IA
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.black87,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.golden.withOpacity(0.3)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.code, size: 16, color: AppColors.golden),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Diagrama Generado por IA:',
+                                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.golden,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.black,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: Colors.grey.shade800),
+                            ),
+                            child: SelectableText(
+                              _visualContent!['asciiDiagram'] ?? '',
+                              style: TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 12,
+                                color: Colors.greenAccent.shade100,
+                                height: 1.2,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    // Mostrar imagen generada si está disponible
+                    if (_visualContent!['hasImage'] == true && _visualContent!['imageData'] != null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.peachy.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.golden.withOpacity(0.3)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.auto_awesome, size: 16, color: AppColors.golden),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Imagen Generada por IA:',
+                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.golden,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.memory(
+                                _visualContent!['imageData'],
+                                width: double.infinity,
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    height: 200,
+                                    color: Colors.grey.shade200,
+                                    child: const Center(
+                                      child: Text('Error al cargar imagen'),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              '🤖 Imagen educativa generada automáticamente por IA basada en el contenido del tema.',
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: AppColors.textSecondary,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    
+                    // Información adicional sobre el diagrama
+                    const SizedBox(height: 8),
+                    Text(
+                      '🎨 Diagrama visual generado por Gemini AI usando caracteres Unicode/ASCII para representar los conceptos de física de manera educativa.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondary,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 

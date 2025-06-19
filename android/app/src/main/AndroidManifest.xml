@@ -1,5 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <application
         android:label="FisicApp"
         android:name="${applicationName}"
@@ -40,6 +42,9 @@
               <!-- <data android:scheme="io.supabase.flutterdemo" android:host="login-callback" /> -->
             </intent-filter>
         </activity>
+        <!-- Google Maps API Key -->
+        <meta-data android:name="com.google.android.geo.API_KEY"
+                   android:value="AIzaSyA2Iani8wy51jBPnXQpTG0_IK9oAEWmeiE"/>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data android:name="flutterEmbedding" android:value="2" />

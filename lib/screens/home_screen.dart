@@ -380,13 +380,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ],
         ),
         const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: () => Navigator.pushNamed(context, '/ai-assistant'),
-            icon: const Icon(Icons.psychology_outlined),
-            label: const Text('Asistente AI'),
-          ),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.pushNamed(context, '/ai-assistant'),
+                icon: const Icon(Icons.psychology_outlined),
+                label: const Text('Asistente AI'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: () => Navigator.pushNamed(context, '/physics-nearby'),
+                icon: const Icon(Icons.location_on_outlined),
+                label: const Text('Física cerca'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.golden,
+                  side: BorderSide(color: AppColors.golden.withOpacity(0.5)),
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
