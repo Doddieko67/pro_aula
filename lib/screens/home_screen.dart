@@ -392,13 +392,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () => Navigator.pushNamed(context, '/physics-nearby'),
-                icon: const Icon(Icons.location_on_outlined),
-                label: const Text('Física cerca'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.golden,
-                  side: BorderSide(color: AppColors.golden.withOpacity(0.5)),
-                ),
+                onPressed: () => Navigator.pushNamed(context, '/courses'),
+                icon: const Icon(Icons.school_outlined),
+                label: const Text('Mis cursos'),
               ),
             ),
           ],

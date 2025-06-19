@@ -11,7 +11,6 @@ import 'package:pro_aula/screens/evaluation_screen.dart';
 import 'package:pro_aula/screens/exercise_screen.dart';
 import 'package:pro_aula/screens/reset_password_screen.dart';
 import 'package:pro_aula/screens/home_screen.dart';
-import 'package:pro_aula/screens/physics_nearby_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Importar el tema personalizado
@@ -182,7 +181,6 @@ class _PhysicsAIAppState extends State<PhysicsAIApp> {
         '/reset-password': (context) => const ResetPasswordScreen(),
         '/ai-assistant': (context) => const AIPhysicsAssistantScreen(),
         '/profile': (context) => const ProfileScreen(),
-        '/physics-nearby': (context) => const PhysicsNearbyScreen(),
       },
 
       // Configurar generación de rutas para parámetros

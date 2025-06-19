@@ -83,10 +83,8 @@ class _ThemeContentScreenState extends ConsumerState<ThemeContentScreen> {
   final TextEditingController _questionController = TextEditingController();
   final AIThemeService _aiService = AIThemeService();
   bool _hasViewedContent = false;
-  bool _isGeneratingDiagram = false;
   bool _isAnsweringQuestion = false;
   bool _isGeneratingVisual = false;
-  String? _generatedDiagram;
   String? _aiAnswer;
   Map<String, dynamic>? _visualContent;
 
@@ -1039,30 +1037,6 @@ class _ThemeContentScreenState extends ConsumerState<ThemeContentScreen> {
   }
 
   // Métodos para funcionalidad de IA
-  Future<void> _generateDiagram(CourseTheme theme) async {
-    setState(() {
-      _isGeneratingDiagram = true;
-      _generatedDiagram = null;
-    });
-
-    try {
-      final diagramContent = await _aiService.generateDiagram(
-        theme.title,
-        theme.content.toString(),
-      );
-      
-      setState(() {
-        _generatedDiagram = diagramContent;
-        _isGeneratingDiagram = false;
-      });
-    } catch (e) {
-      setState(() {
-        _generatedDiagram = 'Error al generar el diagrama: ${e.toString()}';
-        _isGeneratingDiagram = false;
-      });
-    }
-  }
-
   Future<void> _askQuestion(CourseTheme theme) async {
     final question = _questionController.text.trim();
     if (question.isEmpty) return;
@@ -1110,8 +1084,6 @@ class _ThemeContentScreenState extends ConsumerState<ThemeContentScreen> {
     } catch (e) {
       setState(() {
         _visualContent = {
-          'description': 'Error al generar contenido visual: ${e.toString()}',
-          'asciiDiagram': 'Error generando diagrama: ${e.toString()}',
           'imageData': null,
           'hasImage': false,
         };
@@ -1172,53 +1144,28 @@ class _ThemeContentScreenState extends ConsumerState<ThemeContentScreen> {
             ),
             const SizedBox(height: 16),
             
-            // Botones principales
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _isGeneratingDiagram ? null : () => _generateDiagram(theme),
-                    icon: _isGeneratingDiagram 
-                      ? SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.surface),
-                          ),
-                        )
-                      : const Icon(Icons.draw_outlined),
-                    label: Text(_isGeneratingDiagram ? 'Generando...' : 'Diagrama'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.golden,
-                      foregroundColor: AppColors.surface,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
+            // Botón para generar imagen
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _isGeneratingVisual ? null : () => _generateVisualContent(theme),
+                icon: _isGeneratingVisual 
+                  ? SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.surface),
+                      ),
+                    )
+                  : const Icon(Icons.image_outlined),
+                label: Text(_isGeneratingVisual ? 'Generando imagen...' : 'Generar Imagen'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.vibrantRed,
+                  foregroundColor: AppColors.surface,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: _isGeneratingVisual ? null : () => _generateVisualContent(theme),
-                    icon: _isGeneratingVisual 
-                      ? SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(AppColors.surface),
-                          ),
-                        )
-                      : const Icon(Icons.image_outlined),
-                    label: Text(_isGeneratingVisual ? 'Generando...' : 'Visual'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.vibrantRed,
-                      foregroundColor: AppColors.surface,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
             
             const SizedBox(height: 16),
@@ -1251,48 +1198,6 @@ class _ThemeContentScreenState extends ConsumerState<ThemeContentScreen> {
               onSubmitted: _isAnsweringQuestion ? null : (_) => _askQuestion(theme),
             ),
             
-            // Mostrar diagrama generado
-            if (_generatedDiagram != null) ...[
-              const SizedBox(height: 20),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.golden.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.golden.withOpacity(0.3)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.draw_outlined,
-                          color: AppColors.golden,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Diagrama Generado',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.golden,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      _generatedDiagram!,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        height: 1.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
             
             // Mostrar respuesta de IA
             if (_aiAnswer != null) ...[
@@ -1370,159 +1275,65 @@ class _ThemeContentScreenState extends ConsumerState<ThemeContentScreen> {
                     ),
                     const SizedBox(height: 16),
                     
-                    // Descripción visual
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.visibility_outlined, size: 16, color: AppColors.vibrantRed),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Descripción Visual:',
-                                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.vibrantRed,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            _visualContent!['description'] ?? '',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              height: 1.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 12),
-                    
-                    // Diagrama ASCII generado por IA
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.black87,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.golden.withOpacity(0.3)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.code, size: 16, color: AppColors.golden),
-                              const SizedBox(width: 4),
-                              Text(
-                                'Diagrama Generado por IA:',
-                                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.golden,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.black,
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: Colors.grey.shade800),
-                            ),
-                            child: SelectableText(
-                              _visualContent!['asciiDiagram'] ?? '',
-                              style: TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 12,
-                                color: Colors.greenAccent.shade100,
-                                height: 1.2,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    
-                    // Mostrar imagen generada si está disponible
+                    // Mostrar solo la imagen generada
                     if (_visualContent!['hasImage'] == true && _visualContent!['imageData'] != null) ...[
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.memory(
+                          _visualContent!['imageData'],
+                          width: double.infinity,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              height: 200,
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade200,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Center(
+                                child: Text('Error al cargar imagen'),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
                       const SizedBox(height: 12),
+                      Center(
+                        child: Text(
+                          '🤖 Imagen generada por IA',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.textSecondary,
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ),
+                    ] else ...[
+                      // Mensaje cuando no hay imagen
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: AppColors.peachy.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.golden.withOpacity(0.3)),
+                          color: AppColors.border.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.auto_awesome, size: 16, color: AppColors.golden),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Imagen Generada por IA:',
-                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.golden,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.memory(
-                                _visualContent!['imageData'],
-                                width: double.infinity,
-                                fit: BoxFit.contain,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    height: 200,
-                                    color: Colors.grey.shade200,
-                                    child: const Center(
-                                      child: Text('Error al cargar imagen'),
-                                    ),
-                                  );
-                                },
-                              ),
+                            Icon(
+                              Icons.image_outlined,
+                              size: 48,
+                              color: AppColors.textTertiary,
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              '🤖 Imagen educativa generada automáticamente por IA basada en el contenido del tema.',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              'Generando imagen...',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 color: AppColors.textSecondary,
-                                fontStyle: FontStyle.italic,
                               ),
                             ),
                           ],
                         ),
                       ),
                     ],
-                    
-                    // Información adicional sobre el diagrama
-                    const SizedBox(height: 8),
-                    Text(
-                      '🎨 Diagrama visual generado por Gemini AI usando caracteres Unicode/ASCII para representar los conceptos de física de manera educativa.',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textSecondary,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
                   ],
                 ),
               ),

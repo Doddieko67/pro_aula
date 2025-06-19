@@ -121,7 +121,7 @@ class _AIPhysicsAssistantScreenState
   }
 
   void _initializeGemini() {
-    const apiKey = 'AIzaSyDz-WYNCd0y1Zycydm1fW9DbL66StkIx38';
+    const apiKey = 'AIzaSyDPMJelJMOG8bFX-N0yGydkESt0BXQTJ1s';
 
     _model = GenerativeModel(
       model: 'gemini-2.0-flash',
